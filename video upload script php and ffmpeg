@@ -1,0 +1,120 @@
+<?php
+session_start();
+include("Connect/connect.php");
+$id=$_SESSION['id'];
+
+if(isset($_POST))
+{
+//Loading here.
+$videotitle=addslashes(strip_tags($_POST['videotitle']));
+$videogenre=addslashes(strip_tags($_POST['videogenre']));
+$videodesc=addslashes(strip_tags($_POST['videodesc']));
+$filename = basename($_FILES['videofield']['name']);
+$video=$_FILES["videofield"]["name"];
+$type=$_FILES["videofield"]["type"];
+$size=$_FILES["videofield"]["size"];
+$temp_name=$_FILES["videofield"]["tmp_name"];
+$error=$_FILES["videofield"]["error"];
+$vdate=date("Y.m.d H:i:s"); // Insert date time into database.
+
+
+
+$mimetypes = array('video/mov', 'video/flv', 'video/avi', 'video/mpeg', 'video/mpeg4',
+'video/mpg', 'video/wmv', 'video/vid', 'video/x-msvideo', 'video/3gpp', 'video/quicktime','video/x-ms-wmv');
+
+if($videotitle&&$videogenre&&$videodesc&&$video)
+{
+
+if (in_array($type, $mimetypes))
+{
+
+  if ($_FILES["videofield"]["error"] > 0)
+    {
+    echo "Error: " . $_FILES["videofield"]["error"] . "<br />";
+    }
+  else
+    {
+      if($_FILE["videofield"]["size"]<74295516)
+      {
+
+
+
+        $alphanum = "abcdefghijkmnpqrstuvwxyz23456789";
+
+        $codekey = substr(str_shuffle($alphanum), 0, 8);  // 5 Being the amount of letters/numbers are select from the variable alphanum
+        $filename="$codekey$filename";
+
+	move_uploaded_file($_FILES['videofield']['tmp_name'], "tmp/" . $filename);
+	$pathinfo = pathinfo("tmp/$filename");
+	$fileext = $pathinfo['extension'];
+	$newfilename = basename($filename, $fileext);
+	$newpngname = $newfilename . "jpg";
+	$onefilename = $newfilename . "flv";
+	$swffile = $newfilename . "swf";
+
+
+        $command="/usr/local/bin/ffmpeg -i tmp/$filename -ar 22050 -ab 32 -f flv -s 780x400 Videos/$onefilename";
+        exec($command);
+        
+
+
+      /*  $swfvideo="/usr/local/bin/ffmpeg -i tmp/$filename -ar 44100 -ab 96 -f swf Videoswf/$swffile";
+        exec($swfvideo); */
+
+       /* $mando="/usr/local/bin/ffmpeg -i Videos/$onefilename -y -f image2 -ss 8 -sameq -t 0.001 -s 55*55 Thumb/$newpngname";
+        exec($mando); */
+
+        $mando="/usr/local/bin/ffmpeg -i tmp/$filename -deinterlace -an -ss 1 -t 00:00:01 -r 1 -y -vcodec mjpeg -f mjpeg Thumb/$newpngname 2>&1";
+        exec($mando);
+
+        $thumb="Videosroll/Thumb/";
+        $thumb="$thumb$newpngname";
+        $thevideo="Videosroll/Videos/";
+        $thevideo="$thevideo$onefilename";
+
+
+
+
+       $queryvideo=mysql_query("INSERT INTO Videos  VALUES('','$id','$videotitle','$videogenre','$videodesc','$thumb','$thevideo','','','','','$vdate')");
+
+	//Add points to user.
+	$get_points=mysql_query("Select * from Scores WHERE userid='$id'");
+
+	$collect_o=mysql_fetch_assoc($get_points);
+
+	$point=$collect_o['points'];
+
+	$point=$point+20;
+
+	//Update the score
+
+	$update_score=mysql_query("UPDATE Scores SET points='$point' WHERE userid='$id'");
+
+
+         echo "<font color='#006666' size='4' >Video upload Sucessful.</font>";
+
+      }
+      else
+      {
+          echo "<font color='#8B2323' size='4' face='Times New Roman, Times, serif'>Only less than five minute videos allowed.</font>";
+      }
+    }
+}
+else
+  {
+echo "<font color='#8B2323' size='4' face='Times New Roman, Times, serif'>Upload must be an video wmv, mov, avi or flv.</font>";
+  }
+
+}
+else
+{
+echo "<font color='#8B2323' size='4' face='Times New Roman, Times, serif'>Fill in all fields and make sure you have selected video.</font>";
+}
+
+
+}
+else
+{
+
+}
+?>
